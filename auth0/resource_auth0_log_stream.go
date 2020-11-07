@@ -132,6 +132,18 @@ func newLogStream() *schema.Resource {
 					},
 				},
 			},
+			"aws_partner_event_source": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Sensitive:   true,
+				Description: "Name of the Partner Event Source to be used with AWS, if the type is 'eventbridge'",
+			},
+			"azure_partner_topic": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Sensitive:   true,
+				Description: "Name of the Partner Topic to be used with Azure, if the type is 'eventgrid'",
+			},
 		},
 	}
 }
@@ -164,6 +176,8 @@ func readLogStream(d *schema.ResourceData, m interface{}) error {
 	d.Set("status", c.Status)
 	d.Set("type", c.Type)
 	d.Set("sink", flattenLogStreamSink(d, c.Sink))
+	d.Set("aws_partner_event_source", logStreamAwsPartnerEventSource(c.Sink))
+	d.Set("azure_partner_topic", logStreamAzurePartnerTopic(c.Sink))
 	return nil
 }
 
@@ -327,4 +341,18 @@ func expandLogStreamSplunkSink(d ResourceData) *management.SplunkSink {
 		SplunkSecure: Bool(d, "splunk_secure"),
 	}
 	return o
+}
+
+func logStreamAwsPartnerEventSource(sink interface{}) *string {
+	if s, ok := sink.(*management.EventBridgeSink); ok {
+		return s.AWSPartnerEventSource
+	}
+	return nil
+}
+
+func logStreamAzurePartnerTopic(sink interface{}) *string {
+	if s, ok := sink.(*management.EventGridSink); ok {
+		return s.AzurePartnerTopic
+	}
+	return nil
 }
