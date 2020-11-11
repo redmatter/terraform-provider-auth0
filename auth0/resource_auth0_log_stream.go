@@ -42,124 +42,142 @@ func newLogStream() *schema.Resource {
 					"active", "paused", "suspended"}, false),
 				Description: "Status of the LogStream",
 			},
-			"sink": {
-				Type:     schema.TypeList,
-				MaxItems: 1,
-				Required: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"aws_account_id": {
-							Type:      schema.TypeString,
-							Optional:  true,
-							Sensitive: true,
-							ForceNew:  true,
-						},
-						"aws_region": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
-						},
-						"aws_partner_event_source": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "Name of the Partner Event Source to be used with AWS, if the type is 'eventbridge'",
-						},
-						"azure_subscription_id": {
-							Type:      schema.TypeString,
-							Optional:  true,
-							Sensitive: true,
-							ForceNew:  true,
-						},
-						"azure_resource_group": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
-						},
-						"azure_region": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
-						},
-						"azure_partner_topic": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "Name of the Partner Topic to be used with Azure, if the type is 'eventgrid'",
-						},
-						"http_content_format": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ValidateFunc: validation.StringInSlice([]string{
-								"JSONLINES", "JSONARRAY"}, false),
-						},
-						"http_content_type": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "HTTP Content Type",
-						},
-						"http_endpoint": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "HTTP endpoint",
-						},
-						"http_authorization": {
-							Type:      schema.TypeString,
-							Optional:  true,
-							Sensitive: true,
-						},
-						"http_custom_headers": {
-							Type:        schema.TypeSet,
-							Elem:        &schema.Schema{Type: schema.TypeString},
-							Optional:    true,
-							Description: "custom HTTP headers",
-						},
-
-						"datadog_region": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"datadog_api_key": {
-							Type:      schema.TypeString,
-							Optional:  true,
-							Sensitive: true,
-							ForceNew:  true,
-						},
-						"splunk_domain": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"splunk_token": {
-							Type:      schema.TypeString,
-							Optional:  true,
-							Sensitive: true,
-						},
-						"splunk_port": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"splunk_secure": {
-							Type:     schema.TypeBool,
-							Optional: true,
-						},
-					},
-				},
+			// - `eventbridge` requires `awsAccountId`, and `awsRegion`
+			"aws_account_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				ForceNew:      true,
+				ConflictsWith: []string{"azure_subscription_id", "http_endpoint", "datadog_api_key", "splunk_token"},
+				RequiredWith:  []string{"aws_region"},
+			},
+			"aws_region": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				RequiredWith: []string{"aws_account_id"},
+			},
+			"aws_partner_event_source": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Name of the Partner Event Source to be used with AWS, if the type is 'eventbridge'",
+			},
+			// - `eventgrid` requires `azureSubscriptionId`, `azureResourceGroup`, and `azureRegion`
+			"azure_subscription_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				ForceNew:      true,
+				ConflictsWith: []string{"aws_account_id", "http_endpoint", "datadog_api_key", "splunk_token"},
+				RequiredWith:  []string{"azure_resource_group", "azure_region"},
+			},
+			"azure_resource_group": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"aws_account_id"},
+				RequiredWith:  []string{"azure_subscription_id", "azure_region"},
+			},
+			"azure_region": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"aws_account_id"},
+				RequiredWith:  []string{"azure_subscription_id", "azure_resource_group"},
+			},
+			"azure_partner_topic": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Name of the Partner Topic to be used with Azure, if the type is 'eventgrid'",
+			},
+			// - `http` requires `httpEndpoint`, `httpContentType`, `httpContentFormat`, and `httpAuthorization`
+			"http_content_format": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				RequiredWith: []string{"http_endpoint", "http_authorization", "http_content_type"},
+				ValidateFunc: validation.StringInSlice([]string{
+					"JSONLINES", "JSONARRAY"}, false),
+			},
+			"http_content_type": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Description:  "HTTP Content Type",
+				RequiredWith: []string{"http_endpoint", "http_authorization", "http_content_format"},
+			},
+			"http_endpoint": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "HTTP endpoint",
+				RequiredWith:  []string{"http_content_format", "http_authorization", "http_content_type"},
+				ConflictsWith: []string{"aws_account_id", "azure_subscription_id", "datadog_api_key", "splunk_token"},
+			},
+			"http_authorization": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
+				RequiredWith: []string{"http_endpoint", "http_content_format", "http_content_type"},
+			},
+			"http_custom_headers": {
+				Type:          schema.TypeSet,
+				Elem:          &schema.Schema{Type: schema.TypeString},
+				Optional:      true,
+				Description:   "custom HTTP headers",
+				ConflictsWith: []string{"aws_account_id", "azure_subscription_id", "datadog_api_key", "splunk_token"},
+			},
+			// - `datadog` requires `datadogRegion`, and `datadogApiKey`
+			"datadog_region": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				RequiredWith:  []string{"datadog_api_key"},
+				ConflictsWith: []string{"aws_account_id", "azure_subscription_id", "http_endpoint", "splunk_token"},
+			},
+			"datadog_api_key": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
+				ForceNew:     true,
+				RequiredWith: []string{"datadog_region"},
+			},
+			// - `splunk` requires `splunkDomain`, `splunkToken`, `splunkPort`, and `splunkSecure`
+			"splunk_domain": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				RequiredWith: []string{"splunk_token", "splunk_port", "splunk_secure"},
+			},
+			"splunk_token": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				RequiredWith:  []string{"splunk_domain", "splunk_port", "splunk_secure"},
+				ConflictsWith: []string{"aws_account_id", "azure_subscription_id", "http_endpoint", "datadog_api_key"},
+			},
+			"splunk_port": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				RequiredWith: []string{"splunk_domain", "splunk_token", "splunk_secure"},
+			},
+			"splunk_secure": {
+				Type:         schema.TypeBool,
+				Optional:     true,
+				RequiredWith: []string{"splunk_domain", "splunk_port", "splunk_token"},
 			},
 		},
 	}
 }
 
 func createLogStream(d *schema.ResourceData, m interface{}) error {
-	c := expandLogStream(d)
 	api := m.(*management.Management)
-	if err := api.LogStream.Create(c); err != nil {
+	ls := expandLogStream(d)
+	if err := api.LogStream.Create(ls); err != nil {
 		return err
 	}
-	d.SetId(auth0.StringValue(c.ID))
+	d.SetId(auth0.StringValue(ls.ID))
 	return readLogStream(d, m)
 }
 
 func readLogStream(d *schema.ResourceData, m interface{}) error {
 	api := m.(*management.Management)
-	c, err := api.LogStream.Read(d.Id())
+	ls, err := api.LogStream.Read(d.Id())
 	if err != nil {
 		if mErr, ok := err.(management.Error); ok {
 			if mErr.Status() == http.StatusNotFound {
@@ -170,11 +188,11 @@ func readLogStream(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 
-	d.SetId(auth0.StringValue(c.ID))
-	d.Set("name", c.Name)
-	d.Set("status", c.Status)
-	d.Set("type", c.Type)
-	d.Set("sink", flattenLogStreamSink(d, c.Sink))
+	d.SetId(auth0.StringValue(ls.ID))
+	d.Set("name", ls.Name)
+	d.Set("status", ls.Status)
+	d.Set("type", ls.Type)
+	flattenLogStreamSink(d, ls.Sink)
 	return nil
 }
 
@@ -208,90 +226,77 @@ func flattenLogStreamSink(d ResourceData, sink interface{}) []interface{} {
 
 	switch o := sink.(type) {
 	case *management.EventBridgeSink:
-		m = flattenLogStreamEventBridgeSink(o)
+		flattenLogStreamEventBridgeSink(d, o)
 	case *management.EventGridSink:
-		m = flattenLogStreamEventGridSink(o)
+		flattenLogStreamEventGridSink(d, o)
 	case *management.HTTPSink:
-		m = flattenLogStreamHTTPSink(o)
+		flattenLogStreamHTTPSink(d, o)
 	case *management.DatadogSink:
-		m = flattenLogStreamDatadogSink(o)
+		flattenLogStreamDatadogSink(d, o)
 	case *management.SplunkSink:
-		m = flattenLogStreamSplunkSink(o)
+		flattenLogStreamSplunkSink(d, o)
 	}
 	return []interface{}{m}
 }
 
-func flattenLogStreamEventBridgeSink(o *management.EventBridgeSink) interface{} {
-	return map[string]interface{}{
-		"aws_account_id":           o.GetAWSAccountID(),
-		"aws_region":               o.GetAWSRegion(),
-		"aws_partner_event_source": o.GetAWSPartnerEventSource(),
-	}
+func flattenLogStreamEventBridgeSink(d ResourceData, o *management.EventBridgeSink) {
+	d.Set("aws_account_id", o.GetAWSAccountID())
+	d.Set("aws_region", o.GetAWSRegion())
+	d.Set("aws_partner_event_source", o.GetAWSPartnerEventSource())
 }
 
-func flattenLogStreamEventGridSink(o *management.EventGridSink) interface{} {
-	return map[string]interface{}{
-		"azure_subscription_id": o.GetAzureSubscriptionID(),
-		"azure_resource_group":  o.GetAzureResourceGroup(),
-		"azure_region":          o.GetAzureRegion(),
-		"azure_partner_topic":   o.GetAzurePartnerTopic(),
-	}
+func flattenLogStreamEventGridSink(d ResourceData, o *management.EventGridSink) {
+	d.Set("azure_subscription_id", o.GetAzureSubscriptionID())
+	d.Set("azure_resource_group", o.GetAzureResourceGroup())
+	d.Set("azure_region", o.GetAzureRegion())
+	d.Set("azure_partner_topic", o.GetAzurePartnerTopic())
 }
 
-func flattenLogStreamHTTPSink(o *management.HTTPSink) interface{} {
-	return map[string]interface{}{
-		"http_endpoint":       o.GetHTTPEndpoint(),
-		"http_contentFormat":  o.GetHTTPContentFormat(),
-		"http_contentType":    o.GetHTTPContentType(),
-		"http_authorization":  o.GetHTTPAuthorization(),
-		"http_custom_headers": o.HTTPCustomHeaders,
-	}
+func flattenLogStreamHTTPSink(d ResourceData, o *management.HTTPSink) {
+	d.Set("http_endpoint", o.GetHTTPEndpoint())
+	d.Set("http_contentFormat", o.GetHTTPContentFormat())
+	d.Set("http_contentType", o.GetHTTPContentType())
+	d.Set("http_authorization", o.GetHTTPAuthorization())
+	d.Set("http_custom_headers", o.HTTPCustomHeaders)
 }
 
-func flattenLogStreamDatadogSink(o *management.DatadogSink) interface{} {
-	return map[string]interface{}{
-		"datadog_region":  o.GetDatadogRegion(),
-		"datadog_api_key": o.GetDatadogAPIKey(),
-	}
+func flattenLogStreamDatadogSink(d ResourceData, o *management.DatadogSink) {
+	d.Set("datadog_region", o.GetDatadogRegion())
+	d.Set("datadog_api_key", o.GetDatadogAPIKey())
 }
 
-func flattenLogStreamSplunkSink(o *management.SplunkSink) interface{} {
-	return map[string]interface{}{
-		"splunk_domain": o.GetSplunkDomain(),
-		"splunk_token":  o.GetSplunkToken(),
-		"splunk_port":   o.GetSplunkPort(),
-		"splunk_secure": o.GetSplunkSecure(),
-	}
+func flattenLogStreamSplunkSink(d ResourceData, o *management.SplunkSink) {
+	d.Set("splunk_domain", o.GetSplunkDomain())
+	d.Set("splunk_token", o.GetSplunkToken())
+	d.Set("splunk_port", o.GetSplunkPort())
+	d.Set("splunk_secure", o.GetSplunkSecure())
 }
 func expandLogStream(d ResourceData) *management.LogStream {
 
-	c := &management.LogStream{
+	ls := &management.LogStream{
 		Name:   String(d, "name", IsNewResource()),
 		Type:   String(d, "type", IsNewResource()),
 		Status: String(d, "status"),
 	}
 
 	s := d.Get("type").(string)
+	switch s {
+	case management.LogStreamSinkEventBridge:
+		ls.Sink = expandLogStreamEventBridgeSink(d)
+	case management.LogStreamSinkEventGrid:
+		ls.Sink = expandLogStreamEventGridSink(d)
+	case management.LogStreamSinkHTTP:
+		ls.Sink = expandLogStreamHTTPSink(d)
+	case management.LogStreamSinkDatadog:
+		ls.Sink = expandLogStreamDatadogSink(d)
+	case management.LogStreamSinkSplunk:
+		ls.Sink = expandLogStreamSplunkSink(d)
+	default:
+		log.Printf("[WARN]: Raise an issue with the auth0 provider in order to support it:")
+		log.Printf("[WARN]: 	https://github.com/alexkappa/terraform-provider-auth0/issues/new")
+	}
 
-	List(d, "sink").Elem(func(d ResourceData) {
-		switch s {
-		case management.LogStreamSinkEventBridge:
-			c.Sink = expandLogStreamEventBridgeSink(d)
-		case management.LogStreamSinkEventGrid:
-			c.Sink = expandLogStreamEventGridSink(d)
-		case management.LogStreamSinkHTTP:
-			c.Sink = expandLogStreamHTTPSink(d)
-		case management.LogStreamSinkDatadog:
-			c.Sink = expandLogStreamDatadogSink(d)
-		case management.LogStreamSinkSplunk:
-			c.Sink = expandLogStreamSplunkSink(d)
-		default:
-			log.Printf("[WARN]: Raise an issue with the auth0 provider in order to support it:")
-			log.Printf("[WARN]: 	https://github.com/alexkappa/terraform-provider-auth0/issues/new")
-		}
-	})
-
-	return c
+	return ls
 }
 
 func expandLogStreamEventBridgeSink(d ResourceData) *management.EventBridgeSink {
