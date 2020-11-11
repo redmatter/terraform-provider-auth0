@@ -54,6 +54,7 @@ func newLogStream() *schema.Resource {
 			"aws_region": {
 				Type:         schema.TypeString,
 				Optional:     true,
+				Sensitive:    true,
 				ForceNew:     true,
 				RequiredWith: []string{"aws_account_id"},
 			},
@@ -74,6 +75,7 @@ func newLogStream() *schema.Resource {
 			"azure_resource_group": {
 				Type:          schema.TypeString,
 				Optional:      true,
+				Sensitive:     true,
 				ForceNew:      true,
 				ConflictsWith: []string{"aws_account_id"},
 				RequiredWith:  []string{"azure_subscription_id", "azure_region"},
@@ -81,6 +83,7 @@ func newLogStream() *schema.Resource {
 			"azure_region": {
 				Type:          schema.TypeString,
 				Optional:      true,
+				Sensitive:     true,
 				ForceNew:      true,
 				ConflictsWith: []string{"aws_account_id"},
 				RequiredWith:  []string{"azure_subscription_id", "azure_resource_group"},
