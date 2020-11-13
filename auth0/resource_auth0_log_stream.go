@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 
-	"gopkg.in/auth0.v4"
-	"gopkg.in/auth0.v4/management"
+	"gopkg.in/auth0.v5"
+	"gopkg.in/auth0.v5/management"
 )
 
 func newLogStream() *schema.Resource {
@@ -207,60 +207,60 @@ func flattenLogStreamSink(d ResourceData, sink interface{}) []interface{} {
 	var m interface{}
 
 	switch o := sink.(type) {
-	case *management.EventBridgeSink:
+	case *management.LogStreamSinkAmazonEventBridge:
 		m = flattenLogStreamEventBridgeSink(o)
-	case *management.EventGridSink:
+	case *management.LogStreamSinkAzureEventGrid:
 		m = flattenLogStreamEventGridSink(o)
-	case *management.HTTPSink:
+	case *management.LogStreamSinkHTTP:
 		m = flattenLogStreamHTTPSink(o)
-	case *management.DatadogSink:
+	case *management.LogStreamSinkDatadog:
 		m = flattenLogStreamDatadogSink(o)
-	case *management.SplunkSink:
+	case *management.LogStreamSinkSplunk:
 		m = flattenLogStreamSplunkSink(o)
 	}
 	return []interface{}{m}
 }
 
-func flattenLogStreamEventBridgeSink(o *management.EventBridgeSink) interface{} {
+func flattenLogStreamEventBridgeSink(o *management.LogStreamSinkAmazonEventBridge) interface{} {
 	return map[string]interface{}{
-		"aws_account_id":           o.GetAWSAccountID(),
-		"aws_region":               o.GetAWSRegion(),
-		"aws_partner_event_source": o.GetAWSPartnerEventSource(),
+		"aws_account_id":           o.GetAccountID(),
+		"aws_region":               o.GetRegion(),
+		"aws_partner_event_source": o.GetPartnerEventSource(),
 	}
 }
 
-func flattenLogStreamEventGridSink(o *management.EventGridSink) interface{} {
+func flattenLogStreamEventGridSink(o *management.LogStreamSinkAzureEventGrid) interface{} {
 	return map[string]interface{}{
-		"azure_subscription_id": o.GetAzureSubscriptionID(),
-		"azure_resource_group":  o.GetAzureResourceGroup(),
-		"azure_region":          o.GetAzureRegion(),
-		"azure_partner_topic":   o.GetAzurePartnerTopic(),
+		"azure_subscription_id": o.GetSubscriptionID(),
+		"azure_resource_group":  o.GetResourceGroup(),
+		"azure_region":          o.GetRegion(),
+		"azure_partner_topic":   o.GetPartnerTopic(),
 	}
 }
 
-func flattenLogStreamHTTPSink(o *management.HTTPSink) interface{} {
+func flattenLogStreamHTTPSink(o *management.LogStreamSinkHTTP) interface{} {
 	return map[string]interface{}{
-		"http_endpoint":       o.GetHTTPEndpoint(),
-		"http_contentFormat":  o.GetHTTPContentFormat(),
-		"http_contentType":    o.GetHTTPContentType(),
-		"http_authorization":  o.GetHTTPAuthorization(),
-		"http_custom_headers": o.HTTPCustomHeaders,
+		"http_endpoint":       o.GetEndpoint(),
+		"http_contentFormat":  o.GetContentFormat(),
+		"http_contentType":    o.GetContentType(),
+		"http_authorization":  o.GetAuthorization(),
+		"http_custom_headers": o.CustomHeaders,
 	}
 }
 
-func flattenLogStreamDatadogSink(o *management.DatadogSink) interface{} {
+func flattenLogStreamDatadogSink(o *management.LogStreamSinkDatadog) interface{} {
 	return map[string]interface{}{
-		"datadog_region":  o.GetDatadogRegion(),
-		"datadog_api_key": o.GetDatadogAPIKey(),
+		"datadog_region":  o.GetRegion(),
+		"datadog_api_key": o.GetAPIKey(),
 	}
 }
 
-func flattenLogStreamSplunkSink(o *management.SplunkSink) interface{} {
+func flattenLogStreamSplunkSink(o *management.LogStreamSinkSplunk) interface{} {
 	return map[string]interface{}{
-		"splunk_domain": o.GetSplunkDomain(),
-		"splunk_token":  o.GetSplunkToken(),
-		"splunk_port":   o.GetSplunkPort(),
-		"splunk_secure": o.GetSplunkSecure(),
+		"splunk_domain": o.GetDomain(),
+		"splunk_token":  o.GetToken(),
+		"splunk_port":   o.GetPort(),
+		"splunk_secure": o.GetSecure(),
 	}
 }
 func expandLogStream(d ResourceData) *management.LogStream {
@@ -275,15 +275,15 @@ func expandLogStream(d ResourceData) *management.LogStream {
 
 	List(d, "sink").Elem(func(d ResourceData) {
 		switch s {
-		case management.LogStreamSinkEventBridge:
+		case management.LogStreamTypeAmazonEventBridge:
 			c.Sink = expandLogStreamEventBridgeSink(d)
-		case management.LogStreamSinkEventGrid:
+		case management.LogStreamTypeAzureEventGrid:
 			c.Sink = expandLogStreamEventGridSink(d)
-		case management.LogStreamSinkHTTP:
+		case management.LogStreamTypeHTTP:
 			c.Sink = expandLogStreamHTTPSink(d)
-		case management.LogStreamSinkDatadog:
+		case management.LogStreamTypeDatadog:
 			c.Sink = expandLogStreamDatadogSink(d)
-		case management.LogStreamSinkSplunk:
+		case management.LogStreamTypeSplunk:
 			c.Sink = expandLogStreamSplunkSink(d)
 		default:
 			log.Printf("[WARN]: Raise an issue with the auth0 provider in order to support it:")
@@ -294,48 +294,48 @@ func expandLogStream(d ResourceData) *management.LogStream {
 	return c
 }
 
-func expandLogStreamEventBridgeSink(d ResourceData) *management.EventBridgeSink {
-	o := &management.EventBridgeSink{
-		AWSAccountID:          String(d, "aws_account_id"),
-		AWSRegion:             String(d, "aws_region"),
-		AWSPartnerEventSource: String(d, "aws_partner_event_source"),
+func expandLogStreamEventBridgeSink(d ResourceData) *management.LogStreamSinkAmazonEventBridge {
+	o := &management.LogStreamSinkAmazonEventBridge{
+		AccountID:          String(d, "aws_account_id"),
+		Region:             String(d, "aws_region"),
+		PartnerEventSource: String(d, "aws_partner_event_source"),
 	}
 	return o
 }
 
-func expandLogStreamEventGridSink(d ResourceData) *management.EventGridSink {
-	o := &management.EventGridSink{
-		AzureSubscriptionID: String(d, "azure_subscription_id"),
-		AzureResourceGroup:  String(d, "azure_resource_group"),
-		AzureRegion:         String(d, "azure_region"),
-		AzurePartnerTopic:   String(d, "azure_partner_topic"),
+func expandLogStreamEventGridSink(d ResourceData) *management.LogStreamSinkAzureEventGrid {
+	o := &management.LogStreamSinkAzureEventGrid{
+		SubscriptionID: String(d, "azure_subscription_id"),
+		ResourceGroup:  String(d, "azure_resource_group"),
+		Region:         String(d, "azure_region"),
+		PartnerTopic:   String(d, "azure_partner_topic"),
 	}
 	return o
 }
 
-func expandLogStreamHTTPSink(d ResourceData) *management.HTTPSink {
-	o := &management.HTTPSink{
-		HTTPContentFormat: String(d, "http_content_format"),
-		HTTPContentType:   String(d, "http_content_type"),
-		HTTPEndpoint:      String(d, "http_endpoint"),
-		HTTPAuthorization: String(d, "http_authorization"),
-		HTTPCustomHeaders: Set(d, "http_custom_headers").List(),
+func expandLogStreamHTTPSink(d ResourceData) *management.LogStreamSinkHTTP {
+	o := &management.LogStreamSinkHTTP{
+		ContentFormat: String(d, "http_content_format"),
+		ContentType:   String(d, "http_content_type"),
+		Endpoint:      String(d, "http_endpoint"),
+		Authorization: String(d, "http_authorization"),
+		CustomHeaders: Set(d, "http_custom_headers").List(),
 	}
 	return o
 }
-func expandLogStreamDatadogSink(d ResourceData) *management.DatadogSink {
-	o := &management.DatadogSink{
-		DatadogRegion: String(d, "datadog_region"),
-		DatadogAPIKey: String(d, "datadog_api_key"),
+func expandLogStreamDatadogSink(d ResourceData) *management.LogStreamSinkDatadog {
+	o := &management.LogStreamSinkDatadog{
+		Region: String(d, "datadog_region"),
+		APIKey: String(d, "datadog_api_key"),
 	}
 	return o
 }
-func expandLogStreamSplunkSink(d ResourceData) *management.SplunkSink {
-	o := &management.SplunkSink{
-		SplunkDomain: String(d, "splunk_domain"),
-		SplunkToken:  String(d, "splunk_token"),
-		SplunkPort:   String(d, "splunk_port"),
-		SplunkSecure: Bool(d, "splunk_secure"),
+func expandLogStreamSplunkSink(d ResourceData) *management.LogStreamSinkSplunk {
+	o := &management.LogStreamSinkSplunk{
+		Domain: String(d, "splunk_domain"),
+		Token:  String(d, "splunk_token"),
+		Port:   String(d, "splunk_port"),
+		Secure: Bool(d, "splunk_secure"),
 	}
 	return o
 }
