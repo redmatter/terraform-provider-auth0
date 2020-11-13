@@ -48,6 +48,7 @@ func newLogStream() *schema.Resource {
 				Required: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						// - `eventbridge` requires `awsAccountId`, and `awsRegion`
 						"aws_account_id": {
 							Type:      schema.TypeString,
 							Optional:  true,
@@ -55,15 +56,17 @@ func newLogStream() *schema.Resource {
 							ForceNew:  true,
 						},
 						"aws_region": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
+							ForceNew:  true,
 						},
 						"aws_partner_event_source": {
 							Type:        schema.TypeString,
 							Computed:    true,
 							Description: "Name of the Partner Event Source to be used with AWS, if the type is 'eventbridge'",
 						},
+						// - `eventgrid` requires `azureSubscriptionId`, `azureResourceGroup`, and `azureRegion`
 						"azure_subscription_id": {
 							Type:      schema.TypeString,
 							Optional:  true,
@@ -71,20 +74,23 @@ func newLogStream() *schema.Resource {
 							ForceNew:  true,
 						},
 						"azure_resource_group": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
+							ForceNew:  true,
 						},
 						"azure_region": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
+							ForceNew:  true,
 						},
 						"azure_partner_topic": {
 							Type:        schema.TypeString,
 							Computed:    true,
 							Description: "Name of the Partner Topic to be used with Azure, if the type is 'eventgrid'",
 						},
+						// - `http` requires `httpEndpoint`, `httpContentType`, `httpContentFormat`, and `httpAuthorization`
 						"http_content_format": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -112,7 +118,7 @@ func newLogStream() *schema.Resource {
 							Optional:    true,
 							Description: "custom HTTP headers",
 						},
-
+						// - `datadog` requires `datadogRegion`, and `datadogApiKey`
 						"datadog_region": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -123,6 +129,7 @@ func newLogStream() *schema.Resource {
 							Sensitive: true,
 							ForceNew:  true,
 						},
+						// - `splunk` requires `splunkDomain`, `splunkToken`, `splunkPort`, and `splunkSecure`
 						"splunk_domain": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -148,18 +155,18 @@ func newLogStream() *schema.Resource {
 }
 
 func createLogStream(d *schema.ResourceData, m interface{}) error {
-	c := expandLogStream(d)
 	api := m.(*management.Management)
-	if err := api.LogStream.Create(c); err != nil {
+	ls := expandLogStream(d)
+	if err := api.LogStream.Create(ls); err != nil {
 		return err
 	}
-	d.SetId(auth0.StringValue(c.ID))
+	d.SetId(auth0.StringValue(ls.ID))
 	return readLogStream(d, m)
 }
 
 func readLogStream(d *schema.ResourceData, m interface{}) error {
 	api := m.(*management.Management)
-	c, err := api.LogStream.Read(d.Id())
+	ls, err := api.LogStream.Read(d.Id())
 	if err != nil {
 		if mErr, ok := err.(management.Error); ok {
 			if mErr.Status() == http.StatusNotFound {
@@ -170,11 +177,11 @@ func readLogStream(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 
-	d.SetId(auth0.StringValue(c.ID))
-	d.Set("name", c.Name)
-	d.Set("status", c.Status)
-	d.Set("type", c.Type)
-	d.Set("sink", flattenLogStreamSink(d, c.Sink))
+	d.SetId(auth0.StringValue(ls.ID))
+	d.Set("name", ls.Name)
+	d.Set("status", ls.Status)
+	d.Set("type", ls.Type)
+	d.Set("sink", flattenLogStreamSink(d, ls.Sink))
 	return nil
 }
 
@@ -265,7 +272,7 @@ func flattenLogStreamSplunkSink(o *management.LogStreamSinkSplunk) interface{} {
 }
 func expandLogStream(d ResourceData) *management.LogStream {
 
-	c := &management.LogStream{
+	ls := &management.LogStream{
 		Name:   String(d, "name", IsNewResource()),
 		Type:   String(d, "type", IsNewResource()),
 		Status: String(d, "status"),
@@ -276,22 +283,22 @@ func expandLogStream(d ResourceData) *management.LogStream {
 	List(d, "sink").Elem(func(d ResourceData) {
 		switch s {
 		case management.LogStreamTypeAmazonEventBridge:
-			c.Sink = expandLogStreamEventBridgeSink(d)
+			ls.Sink = expandLogStreamEventBridgeSink(d)
 		case management.LogStreamTypeAzureEventGrid:
-			c.Sink = expandLogStreamEventGridSink(d)
+			ls.Sink = expandLogStreamEventGridSink(d)
 		case management.LogStreamTypeHTTP:
-			c.Sink = expandLogStreamHTTPSink(d)
+			ls.Sink = expandLogStreamHTTPSink(d)
 		case management.LogStreamTypeDatadog:
-			c.Sink = expandLogStreamDatadogSink(d)
+			ls.Sink = expandLogStreamDatadogSink(d)
 		case management.LogStreamTypeSplunk:
-			c.Sink = expandLogStreamSplunkSink(d)
+			ls.Sink = expandLogStreamSplunkSink(d)
 		default:
 			log.Printf("[WARN]: Raise an issue with the auth0 provider in order to support it:")
 			log.Printf("[WARN]: 	https://github.com/alexkappa/terraform-provider-auth0/issues/new")
 		}
 	})
 
-	return c
+	return ls
 }
 
 func expandLogStreamEventBridgeSink(d ResourceData) *management.LogStreamSinkAmazonEventBridge {

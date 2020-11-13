@@ -100,7 +100,8 @@ func TestAccLogStreamEventBridge(t *testing.T) {
 }
 
 //This test fails it subscription key is not valid, or Eventgrid Resource Provider is not registered in the subscription
-/*func TestAccLogStreamEventGrid(t *testing.T) {
+func TestAccLogStreamEventGrid(t *testing.T) {
+	t.Skip("this test requires an active subscription")
 
 	resource.Test(t, resource.TestCase{
 		Providers: map[string]terraform.ResourceProvider{
@@ -130,7 +131,7 @@ func TestAccLogStreamEventBridge(t *testing.T) {
 		},
 	})
 }
-*/
+
 func TestAccLogStreamDatadog(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
