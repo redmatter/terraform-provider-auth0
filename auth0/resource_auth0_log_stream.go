@@ -42,21 +42,23 @@ func newLogStream() *schema.Resource {
 					"active", "paused", "suspended"}, false),
 				Description: "Status of the LogStream",
 			},
-			"sink": {
-				Type:     schema.TypeList,
-				MaxItems: 1,
-				Required: true,
+
+			"eventbridge_sink": {
+				Type:         schema.TypeList,
+				MaxItems:     1,
+				Optional:     true,
+				ExactlyOneOf: []string{"eventbridge_sink", "eventgrid_sink", "http_sink", "datadog_sink", "splunk_sink"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"aws_account_id": {
 							Type:      schema.TypeString,
-							Optional:  true,
+							Required:  true,
 							Sensitive: true,
 							ForceNew:  true,
 						},
 						"aws_region": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 							ForceNew: true,
 						},
 						"aws_partner_event_source": {
@@ -65,20 +67,30 @@ func newLogStream() *schema.Resource {
 							Sensitive:   true,
 							Description: "Name of the Partner Event Source to be used with AWS, if the type is 'eventbridge'",
 						},
+					},
+				},
+			},
+			"eventgrid_sink": {
+				Type:         schema.TypeList,
+				MaxItems:     1,
+				Optional:     true,
+				ExactlyOneOf: []string{"eventbridge_sink", "eventgrid_sink", "http_sink", "datadog_sink", "splunk_sink"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
 						"azure_subscription_id": {
 							Type:      schema.TypeString,
-							Optional:  true,
+							Required:  true,
 							Sensitive: true,
 							ForceNew:  true,
 						},
 						"azure_resource_group": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 							ForceNew: true,
 						},
 						"azure_region": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 							ForceNew: true,
 						},
 						"azure_partner_topic": {
@@ -87,9 +99,19 @@ func newLogStream() *schema.Resource {
 							Sensitive:   true,
 							Description: "Name of the Partner Topic to be used with Azure, if the type is 'eventgrid'",
 						},
+					},
+				},
+			},
+			"http_sink": {
+				Type:         schema.TypeList,
+				MaxItems:     1,
+				Optional:     true,
+				ExactlyOneOf: []string{"eventbridge_sink", "eventgrid_sink", "http_sink", "datadog_sink", "splunk_sink"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
 						"http_content_format": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 							ValidateFunc: validation.StringInSlice([]string{
 								"JSONLINES", "JSONARRAY"}, false),
 						},
@@ -100,7 +122,7 @@ func newLogStream() *schema.Resource {
 						},
 						"http_endpoint": {
 							Type:        schema.TypeString,
-							Optional:    true,
+							Required:    true,
 							Description: "HTTP endpoint",
 						},
 						"http_authorization": {
@@ -114,33 +136,52 @@ func newLogStream() *schema.Resource {
 							Optional:    true,
 							Description: "custom HTTP headers",
 						},
-
+					},
+				},
+			},
+			"datadog_sink": {
+				Type:         schema.TypeList,
+				MaxItems:     1,
+				Optional:     true,
+				ExactlyOneOf: []string{"eventbridge_sink", "eventgrid_sink", "http_sink", "datadog_sink", "splunk_sink"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
 						"datadog_region": {
 							Type:      schema.TypeString,
 							Sensitive: true,
-							Optional:  true,
+							Required:  true,
 						},
 						"datadog_api_key": {
 							Type:      schema.TypeString,
-							Optional:  true,
+							Required:  true,
 							Sensitive: true,
 						},
+					},
+				},
+			},
+			"splunk_sink": {
+				Type:         schema.TypeList,
+				MaxItems:     1,
+				Optional:     true,
+				ExactlyOneOf: []string{"eventbridge_sink", "eventgrid_sink", "http_sink", "datadog_sink", "splunk_sink"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
 						"splunk_domain": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 						},
 						"splunk_token": {
 							Type:      schema.TypeString,
-							Optional:  true,
+							Required:  true,
 							Sensitive: true,
 						},
 						"splunk_port": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 						},
 						"splunk_secure": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Required: true,
 						},
 					},
 				},
@@ -189,7 +230,7 @@ func readLogStream(d *schema.ResourceData, m interface{}) error {
 	d.Set("name", ls.Name)
 	d.Set("status", ls.Status)
 	d.Set("type", ls.Type)
-	d.Set("sink", flattenLogStreamSink(d, ls.Sink))
+	flattenLogStreamSink(d, ls.Sink)
 	return nil
 }
 
@@ -218,23 +259,20 @@ func deleteLogStream(d *schema.ResourceData, m interface{}) error {
 	return err
 }
 
-func flattenLogStreamSink(d ResourceData, sink interface{}) []interface{} {
-
-	var m interface{}
-
+func flattenLogStreamSink(d *schema.ResourceData, sink interface{}) {
 	switch o := sink.(type) {
 	case *management.LogStreamSinkAmazonEventBridge:
-		m = flattenLogStreamSinkAmazonEventBridge(o)
+		d.Set("eventbridge_sink", []interface{}{flattenLogStreamSinkAmazonEventBridge(o)})
 	case *management.LogStreamSinkAzureEventGrid:
-		m = flattenLogStreamSinkAzureEventGrid(o)
+		d.Set("eventgrid_sink", []interface{}{flattenLogStreamSinkAzureEventGrid(o)})
 	case *management.LogStreamSinkHTTP:
-		m = flattenLogStreamSinkHTTP(o)
+		d.Set("http_sink", []interface{}{flattenLogStreamSinkHTTP(o)})
 	case *management.LogStreamSinkDatadog:
-		m = flattenLogStreamSinkDatadog(o)
+		d.Set("datadog_sink", []interface{}{flattenLogStreamSinkDatadog(o)})
 	case *management.LogStreamSinkSplunk:
-		m = flattenLogStreamSinkSplunk(o)
+		d.Set("splunk_sink", []interface{}{flattenLogStreamSinkSplunk(o)})
 	}
-	return []interface{}{m}
+	return
 }
 
 func flattenLogStreamSinkAmazonEventBridge(o *management.LogStreamSinkAmazonEventBridge) interface{} {
@@ -289,7 +327,7 @@ func expandLogStream(d ResourceData) *management.LogStream {
 
 	s := d.Get("type").(string)
 
-	List(d, "sink").Elem(func(d ResourceData) {
+	List(d, s+"_sink").Elem(func(d ResourceData) {
 		switch s {
 		case management.LogStreamTypeAmazonEventBridge:
 			// LogStreamTypeAmazonEventBridge cannot be updated
