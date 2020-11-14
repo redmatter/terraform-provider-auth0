@@ -85,7 +85,6 @@ func newLogStream() *schema.Resource {
 							Type:        schema.TypeString,
 							Computed:    true,
 							Sensitive:   true,
-							ForceNew:    true,
 							Description: "Name of the Partner Topic to be used with Azure, if the type is 'eventgrid'",
 						},
 						"http_content_format": {
@@ -142,7 +141,6 @@ func newLogStream() *schema.Resource {
 						"splunk_secure": {
 							Type:     schema.TypeBool,
 							Optional: true,
-							Default:  false,
 						},
 					},
 				},
